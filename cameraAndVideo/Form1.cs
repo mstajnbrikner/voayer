@@ -24,12 +24,15 @@ namespace cameraAndVideo
         DateTime dateTime;
         DateTime dateTime_finish;
         int frameCount = 0;
-    
+
+        bool setupFinished = false;
 
         bool recordingEnabled = false;
         private int framesRecorded;
+        private int maxFrames;
         string destinationPath = @"D:\MEGA\Visual Studio - programi\EMGU CV\";
         int videoNumber = 0;
+        double fps = 0;
 
         Mat m = new Mat();
         Mat last_m = new Mat();
@@ -41,6 +44,7 @@ namespace cameraAndVideo
         Image<Gray, byte> diffFrame;
 
         bool firstFrame = true;
+        
 
         public Form1()
         {
@@ -54,7 +58,7 @@ namespace cameraAndVideo
             if(capture == null)
             {
                 capture = new Emgu.CV.VideoCapture(0);
-            }
+            }            
             capture.ImageGrabbed += Capture_ImageGrabbed;              
             capture.Start();
 
@@ -70,11 +74,13 @@ namespace cameraAndVideo
             int moves;
             frameCount++;
 
-            /*if (DateTime.Now > dateTime_finish)
+            if (DateTime.Now > dateTime_finish && setupFinished == false)
             {
-                Console.WriteLine("U 60000 ms, " + frameCount.ToString() + " frame-ova!");
-                dateTime_finish = DateTime.Now.AddMinutes(10);
-            }*/
+                //Console.WriteLine("U 60000 ms, " + frameCount.ToString() + " frame-ova!");
+                //dateTime_finish = DateTime.Now.AddMinutes(10);
+                setupFinished = true;
+                fps = (double)frameCount / (double)10;
+            }
                 
             
             try
@@ -102,30 +108,16 @@ namespace cameraAndVideo
                     if ((moves > 110000) && (recordingEnabled == false) && (DateTime.Now > dateTime_finish))        
                     {
                         recordingEnabled = true;
+                        maxFrames = 80;
                         framesRecorded = 0;
                     }
+                    if((moves > 110000) && (recordingEnabled == true) && (framesRecorded > (maxFrames - 40)))
+                    {
+                        maxFrames += 40;
+                        Console.WriteLine("Dodano 40 okvira!");
+                    }
 
-                    //Console.WriteLine(moves);
-                   /* if (moves > 160000)
-                    {
-                        Console.Beep(6000, 23);
-                    }
-                    else if (moves > 140000)
-                    {
-                        Console.Beep(4000, 20);
-                    }
-                    else if (moves > 120000)
-                    {
-                        Console.Beep(2500, 18);
-                    }
-                    else if (moves > 105000)
-                    {
-                        Console.Beep(1000, 15);
-                    }
-                    else
-                    {
-
-                    }*/
+                   
                     pictureBox2.Image = diffFrame.ToBitmap();
 
                     last_m = m.Clone();
@@ -138,12 +130,12 @@ namespace cameraAndVideo
                         int fourcc = Convert.ToInt32(capture.GetCaptureProperty(Emgu.CV.CvEnum.CapProp.FourCC));
                         int width = Convert.ToInt32(capture.GetCaptureProperty(Emgu.CV.CvEnum.CapProp.FrameWidth));
                         int height = Convert.ToInt32(capture.GetCaptureProperty(Emgu.CV.CvEnum.CapProp.FrameHeight));                                            
-                        writer = new VideoWriter(destinationPath + "recorded" + (videoNumber + 1).ToString() + ".mp4", fourcc, 8, new Size(width, height), false);
+                        writer = new VideoWriter(destinationPath + "recorded" + (videoNumber + 1).ToString() + ".mp4", fourcc, fps, new Size(width, height), false);
                         videoNumber++;
                     }
                     writer.Write(m);
                     framesRecorded++;
-                    if (framesRecorded == 80)
+                    if (framesRecorded == maxFrames)
                     {
                         recordingEnabled = false;
                         writer.Dispose();
